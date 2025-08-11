@@ -1,0 +1,2 @@
+
+COLUMN_IMAGE = "Image"
