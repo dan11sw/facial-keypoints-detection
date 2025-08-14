@@ -1,12 +1,10 @@
 import numpy as np
 import pandas as pd
-import torchvision.transforms.functional as F
-import torch
-import torchvision
 from torch.utils.data import Dataset
-from torchvision.utils import _log_api_usage_once
+from tqdm import tqdm
 
 import constants.columns as cc
+
 
 class FacialKeypointsDataset(Dataset):
     # Define slots (for save concrete attributes of class in memory)
@@ -20,7 +18,8 @@ class FacialKeypointsDataset(Dataset):
         self.images = []
         self.keypoints = []
 
-        for index, row in self.df.iterrows():
+        # Prepare all elements of dataframe using iter rows method
+        for index, row in tqdm(self.df.iterrows(), desc="Processing load dataset", total=len(self.df)):
             # Image
             image = row[cc.COLUMN_IMAGE]
             image = np.fromstring(image, sep=' ').reshape([96, 96])
@@ -38,13 +37,15 @@ class FacialKeypointsDataset(Dataset):
             self.images.append(image)
             self.keypoints.append(keypoints)
 
+        print("\n✅ Load dataset completed!")
+
     def __getitem__(self, idx):
         image = self.images[idx]
         keypoints = self.keypoints[idx]
 
         return_dict = {
-            'image': image,
-            'keypoints': keypoints
+            cc.COLUMN_image: image,
+            cc.COLUMN_keypoint: keypoints
         }
 
         if self.transforms:

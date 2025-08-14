@@ -6,8 +6,8 @@ import constants.columns as cc
 from tqdm import tqdm
 
 def NaNMSELoss(output, target):
-    filter = ~torch.isnan(target)
-    return ((output[filter] - target[filter]) ** 2).mean()
+    filter_mark = ~torch.isnan(target)
+    return ((output[filter_mark] - target[filter_mark]) ** 2).mean()
 
 def get_image_and_keypoints(series):
     image = series[cc.COLUMN_IMAGE]
