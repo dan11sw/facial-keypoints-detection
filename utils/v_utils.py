@@ -1,7 +1,24 @@
+import torch
 import matplotlib.pyplot as plt
 import utils.c_utils as c_utils
 import constants.columns as cc
 
+def cuda_device_info():
+    if torch.cuda.is_available():
+        num_gpus = torch.cuda.device_count()
+        print(f"Available GPU: {num_gpus}")
+
+        for i in range(num_gpus):
+            print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+            print(f"  CUDA capability: {torch.cuda.get_device_capability(i)}")
+            print(f"  Total memory: {torch.cuda.get_device_properties(i).total_memory / 1024 ** 3:.2f} GB\n")
+
+        current_device = torch.cuda.current_device()
+        print(f"Current GPU: {current_device} ({torch.cuda.get_device_name(current_device)})")
+    else:
+        print("CUDA not available")
+
+    return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def show_count_images(duplicates_list=None, begin=0, end=6):
     if duplicates_list is None:
