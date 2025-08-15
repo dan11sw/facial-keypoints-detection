@@ -170,6 +170,6 @@ trainer.scheduler = torch.optim.lr_scheduler.MultiStepLR(trainer.optimizer,
                                                          milestones=[5, 10, 25, 40, 65],
                                                          gamma=0.1)
 
-trainer.train(epochs=EPOCHS, title="Process training №1")
+trainer.train(epochs=EPOCHS, title="Process training №2")
 # Save results
 trainer.save_results(model_path="model_resnet18_2.pth", log_path="logger_resnet18_2.csv")
