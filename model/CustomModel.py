@@ -1,8 +1,12 @@
+from typing import Mapping, Any
+
 import numpy as np
 import torch
 import torchvision
 import pandas as pd
 import copy
+import matplotlib.pyplot as plt
+import os
 
 from dataset.CustomRandomRotation import CustomRandomRotation
 from dataset.CustomRandomTranslation import CustomRandomTranslation
@@ -20,6 +24,13 @@ class CustomResNet18(torch.nn.Module):
         # Load pretrained ResNet18 model
         self.backbone = torchvision.models.resnet18(pretrained=pretrained)
         self.backbone.fc = torch.nn.Linear(self.backbone.fc.in_features, num_classes)
+
+    def load_model(self, model_path: str):
+        if model_path is not None and not os.path.exists(model_path):
+            raise Exception(f"Error: not found model file by path \"{model_path}\"")
+
+        if model_path is not None:
+            self.load_state_dict(torch.load(model_path))
 
     def freeze_layers(self, freeze=False):
         # Parameters
@@ -87,13 +98,18 @@ class CustomDatasetPipeline:
 
         return train_loader, val_loader
 
+    def get_config(self):
+        return {
+            'train_set': self.train_set,
+            'val_set': self.val_set
+        }
+
 
 class CustomTrainer:
     __slots__ = [
         "model", "train_loader", "val_loader",
-        "device", "optimizer", "train_loss",
-        "val_loss", "logger", "scheduler",
-        "min_val_loss", "best_model"
+        "device", "optimizer", "logger",
+        "scheduler", "min_val_loss", "best_model"
     ]
 
     def __init__(self, model, train_loader, val_loader, device, min_val_loss=np.inf):
@@ -108,19 +124,34 @@ class CustomTrainer:
             weight_decay=0.001
         )
 
-        self.train_loss = 0.0
-        self.val_loss = 0.0
         self.min_val_loss = min_val_loss
 
         self.logger = {
+            'epoch': [],
             'train': [],
             'val': []
         }
 
         self.scheduler = None
 
+    def load(self, model_path: str = None, log_path: str = None):
+        self.model.load_model(model_path)
+
+        if log_path is not None and not os.path.exists(log_path):
+            raise Exception(f"Error: not found log file by path \"{log_path}\"")
+
+        if log_path is not None:
+            df = pd.read_csv(log_path)
+
+            self.logger = {
+                'epoch': df['epoch'].tolist(),
+                'train': df['train'].tolist(),
+                'val': df['val'].tolist()
+            }
+
     def reset_logger(self):
         self.logger = {
+            'epoch': [],
             'train': [],
             'val': []
         }
@@ -164,23 +195,24 @@ class CustomTrainer:
         if title is not None:
             print(title + "\n")
 
-        self.train_loss = 0.0
-        self.val_loss = 0.0
+        train_loss = 0.0
+        val_loss = 0.0
 
         for epoch in range(epochs):
             torch.manual_seed(1 + epoch)
             print(f"EPOCH: {epoch + 1} / {epochs}")
 
-            self.train_loss = self.train_epoch()
-            self.val_loss = self.validate()
+            train_loss = self.train_epoch()
+            val_loss = self.validate()
 
-            self.logger['train'].append(self.train_loss)
-            self.logger['val'].append(self.val_loss)
+            self.logger['epoch'].append(epoch + 1)
+            self.logger['train'].append(train_loss)
+            self.logger['val'].append(val_loss)
 
-            print(f"Train loss: {self.train_loss:.6f}, Val loss: {self.val_loss:.6f}\n")
+            print(f"Train loss: {train_loss:.6f}, Val loss: {val_loss:.6f}\n")
 
-            if self.min_val_loss > self.val_loss:
-                self.min_val_loss = self.val_loss
+            if self.min_val_loss > val_loss:
+                self.min_val_loss = val_loss
                 self.best_model = copy.deepcopy(self.model)
 
     def save_results(self, model_path="model.pth", log_path="logger.csv"):
@@ -189,4 +221,24 @@ class CustomTrainer:
         else:
             torch.save(self.model.state_dict(), model_path)
 
-        pd.DataFrame(self.logger).to_csv(log_path)
+        logger_df = pd.DataFrame(self.logger)
+        logger_df.set_index("epoch")
+        logger_df.to_csv(log_path)
+
+    def loss_visualization(self, config_pipeline):
+        plt.figure(figsize=(10, 10))
+
+        logger_df = pd.DataFrame(self.logger)
+        logger_df.set_index("epoch")
+
+        plt.plot(logger_df["train"] * len(self.train_loader) / len(config_pipeline['train_set']), label="train_loss")
+        plt.plot(logger_df["val"] * len(self.val_loader) / len(config_pipeline['val_set']), label="val_loss")
+
+        plt.title("Training loss for ResNet-18")
+
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+
+        plt.legend(loc="lower left")
+        plt.show()
+

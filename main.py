@@ -102,7 +102,7 @@ print(duplicates_df.shape)
 # v_utils.show_count_images(duplicates_list)
 
 # Delete duplicates
-c_utils.delete_duplicates(train_data, duplicates_list)
+# c_utils.delete_duplicates(train_data, duplicates_list)
 del duplicates, duplicates_df, duplicates_list
 
 # Reset index
@@ -144,7 +144,7 @@ def data_augment_test(e_dataset=None):
 # data_augment_test()
 
 BATCH_SIZE = 64
-EPOCHS = 120
+EPOCHS = 60
 EPOCHS_PRETRAIN = 25
 
 # Create model
@@ -157,10 +157,10 @@ train_loader, val_loader = pipeline.get_loaders()
 
 # Training model
 trainer = c_model.CustomTrainer(model, train_loader, val_loader, device)
-trainer.train(epochs=EPOCHS_PRETRAIN, title="Process training №1")
+# trainer.train(epochs=EPOCHS_PRETRAIN, title="Process training №1")
 
 # Save results
-trainer.save_results(model_path="model_resnet18_1.pth", log_path="logger_resnet18_1.csv")
+# trainer.save_results(model_path="model_resnet18_1.pth", log_path="logger_resnet18_1.csv")
 
 # Further education
 model.freeze_layers(False)
@@ -170,6 +170,12 @@ trainer.scheduler = torch.optim.lr_scheduler.MultiStepLR(trainer.optimizer,
                                                          milestones=[5, 10, 25, 40, 65],
                                                          gamma=0.1)
 
-trainer.train(epochs=EPOCHS, title="Process training №2")
+# trainer.train(epochs=EPOCHS, title="Process training №2")
 # Save results
-trainer.save_results(model_path="model_resnet18_2.pth", log_path="logger_resnet18_2.csv")
+# trainer.save_results(model_path="model_resnet18_2.pth", log_path="logger_resnet18_2.csv")
+
+# Loading an already trained model
+trainer.load("./results/model_resnet18_2.pth", "./results/logger_resnet18_2.csv")
+
+# Show result training model
+trainer.loss_visualization(pipeline.get_config())
